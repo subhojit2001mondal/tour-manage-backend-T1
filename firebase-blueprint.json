@@ -1,0 +1,244 @@
+{
+  "entities": {
+    "Destination": {
+      "title": "Destination",
+      "description": "Indian travel destination offered on Tour Manage",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "state": { "type": "string", "maxLength": 100 },
+        "region": { "type": "string", "enum": ["North", "South", "East", "West", "Central", "Northeast", "Islands"] },
+        "description": { "type": "string", "maxLength": 2000 },
+        "coverImageUrl": { "type": "string", "maxLength": 500 },
+        "galleryUrls": { "type": "array" },
+        "bestSeason": { "type": "string", "maxLength": 100 },
+        "tags": { "type": "array" },
+        "featured": { "type": "boolean" },
+        "active": { "type": "boolean" },
+        "isDemo": { "type": "boolean" }
+      },
+      "required": ["name", "state", "region", "description", "coverImageUrl", "bestSeason", "active"]
+    },
+    "Agency": {
+      "title": "Agency",
+      "description": "Partner tour agency registered under Tour Manage banner",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 120 },
+        "logoUrl": { "type": "string", "maxLength": 500 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "tier": { "type": "string", "enum": ["budget", "standard", "premium"] },
+        "rating": { "type": "number" },
+        "verified": { "type": "boolean" },
+        "phone": { "type": "string", "maxLength": 30 },
+        "email": { "type": "string", "maxLength": 120 },
+        "city": { "type": "string", "maxLength": 100 },
+        "commissionPercent": { "type": "number" },
+        "active": { "type": "boolean" },
+        "isDemo": { "type": "boolean" }
+      },
+      "required": ["name", "tier", "rating", "verified", "phone", "email", "city", "commissionPercent", "active"]
+    },
+    "Package": {
+      "title": "Package",
+      "description": "Curated holiday tour package linked to an agency and destination",
+      "type": "object",
+      "properties": {
+        "agencyId": { "type": "string", "maxLength": 128 },
+        "destinationId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "days": { "type": "number" },
+        "nights": { "type": "number" },
+        "pricePerPerson": { "type": "number" },
+        "inclusions": { "type": "array" },
+        "exclusions": { "type": "array" },
+        "itinerary": { "type": "array" },
+        "cancellationPolicy": { "type": "string", "maxLength": 2000 },
+        "maxGroupSize": { "type": "number" },
+        "imageUrls": { "type": "array" },
+        "rating": { "type": "number" },
+        "active": { "type": "boolean" },
+        "vehicle": { "type": "object" },
+        "food": { "type": "object" },
+        "hotel": { "type": "object" },
+        "isDemo": { "type": "boolean" }
+      },
+      "required": ["agencyId", "destinationId", "title", "days", "nights", "pricePerPerson", "cancellationPolicy", "maxGroupSize", "active", "vehicle", "food", "hotel"]
+    },
+    "Departure": {
+      "title": "Departure",
+      "description": "Specific fixed departure date for a tour package",
+      "type": "object",
+      "properties": {
+        "packageId": { "type": "string", "maxLength": 128 },
+        "agencyId": { "type": "string", "maxLength": 128 },
+        "destinationId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string" },
+        "seatsTotal": { "type": "number" },
+        "seatsBooked": { "type": "number" },
+        "seatsHeld": { "type": "number" },
+        "priceOverride": { "type": "number" },
+        "status": { "type": "string", "enum": ["open", "limited", "full", "closed"] },
+        "isDemo": { "type": "boolean" }
+      },
+      "required": ["packageId", "agencyId", "destinationId", "date", "seatsTotal", "seatsBooked", "seatsHeld", "status"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Android app registered customer profile",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "email": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string" },
+        "isDemo": { "type": "boolean" }
+      },
+      "required": ["name", "phone", "email"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Customer tour reservation and payment record",
+      "type": "object",
+      "properties": {
+        "bookingCode": { "type": "string", "maxLength": 30 },
+        "customerId": { "type": "string", "maxLength": 128 },
+        "packageId": { "type": "string", "maxLength": 128 },
+        "agencyId": { "type": "string", "maxLength": 128 },
+        "destinationId": { "type": "string", "maxLength": 128 },
+        "departureId": { "type": "string", "maxLength": 128 },
+        "travelDate": { "type": "string" },
+        "travelers": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "commissionAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["held", "confirmed", "cancelled", "completed", "refunded"] },
+        "paymentStatus": { "type": "string", "enum": ["pending", "paid", "failed", "refunded"] },
+        "razorpayOrderId": { "type": "string", "maxLength": 100 },
+        "razorpayPaymentId": { "type": "string", "maxLength": 100 },
+        "holdExpiresAt": { "type": "string" },
+        "agencyPayoutStatus": { "type": "string", "enum": ["pending", "settled"] },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" },
+        "isDemo": { "type": "boolean" }
+      },
+      "required": ["bookingCode", "customerId", "packageId", "agencyId", "destinationId", "departureId", "totalAmount", "commissionAmount", "status", "paymentStatus", "agencyPayoutStatus"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "Customer support chat conversation session",
+      "type": "object",
+      "properties": {
+        "customerId": { "type": "string", "maxLength": 128 },
+        "mode": { "type": "string", "enum": ["bot", "human"] },
+        "status": { "type": "string", "enum": ["open", "waiting_for_staff", "closed"] },
+        "assignedStaffId": { "type": "string", "maxLength": 128 },
+        "lastMessage": { "type": "string", "maxLength": 2000 },
+        "lastMessageAt": { "type": "string" },
+        "isDemo": { "type": "boolean" }
+      },
+      "required": ["customerId", "mode", "status", "lastMessage"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Individual message inside a customer chat session",
+      "type": "object",
+      "properties": {
+        "sender": { "type": "string", "enum": ["customer", "bot", "staff"] },
+        "text": { "type": "string", "maxLength": 3000 },
+        "createdAt": { "type": "string" },
+        "isDemo": { "type": "boolean" }
+      },
+      "required": ["sender", "text"]
+    },
+    "CallbackRequest": {
+      "title": "CallbackRequest",
+      "description": "Customer request for a phone callback from staff",
+      "type": "object",
+      "properties": {
+        "customerId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "topic": { "type": "string", "maxLength": 200 },
+        "status": { "type": "string", "enum": ["new", "called", "closed"] },
+        "createdAt": { "type": "string" },
+        "isDemo": { "type": "boolean" }
+      },
+      "required": ["name", "phone", "topic", "status"]
+    },
+    "Staff": {
+      "title": "Staff",
+      "description": "Tour Manage back-office staff member record",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 120 },
+        "email": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "enum": ["owner", "support"] },
+        "active": { "type": "boolean" },
+        "isDemo": { "type": "boolean" }
+      },
+      "required": ["name", "email", "role", "active"]
+    },
+    "CompanySettings": {
+      "title": "CompanySettings",
+      "description": "Global company settings and support contact details",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string", "maxLength": 150 },
+        "supportPhones": { "type": "array" },
+        "supportEmail": { "type": "string", "maxLength": 120 },
+        "supportHours": { "type": "string", "maxLength": 100 },
+        "whatsappNumber": { "type": "string", "maxLength": 30 },
+        "aboutText": { "type": "string", "maxLength": 3000 },
+        "termsUrl": { "type": "string", "maxLength": 500 },
+        "isDemo": { "type": "boolean" }
+      },
+      "required": ["companyName", "supportEmail", "supportHours", "aboutText"]
+    }
+  },
+  "firestore": {
+    "/destinations/{id}": {
+      "schema": { "$ref": "#/entities/Destination" },
+      "description": "Collection of Indian travel destinations"
+    },
+    "/agencies/{id}": {
+      "schema": { "$ref": "#/entities/Agency" },
+      "description": "Collection of partner tour agencies"
+    },
+    "/packages/{id}": {
+      "schema": { "$ref": "#/entities/Package" },
+      "description": "Collection of tour packages"
+    },
+    "/departures/{id}": {
+      "schema": { "$ref": "#/entities/Departure" },
+      "description": "Collection of fixed departure dates"
+    },
+    "/customers/{uid}": {
+      "schema": { "$ref": "#/entities/Customer" },
+      "description": "Customer profiles from Android app"
+    },
+    "/bookings/{id}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Customer bookings and payment statuses"
+    },
+    "/chats/{chatId}": {
+      "schema": { "$ref": "#/entities/Chat" },
+      "description": "Customer support chat threads"
+    },
+    "/chats/{chatId}/messages/{id}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Messages inside a support chat"
+    },
+    "/callbackRequests/{id}": {
+      "schema": { "$ref": "#/entities/CallbackRequest" },
+      "description": "Callback requests from customers"
+    },
+    "/staff/{uid}": {
+      "schema": { "$ref": "#/entities/Staff" },
+      "description": "Staff access and role records"
+    },
+    "/settings/company": {
+      "schema": { "$ref": "#/entities/CompanySettings" },
+      "description": "Company contact information and policies"
+    }
+  }
+}

@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner() {
+      return isSignedIn() && (
+        request.auth.token.role == 'owner' ||
+        request.auth.token.email == 'subhojit2001mondal@gmail.com'
+      );
+    }
+
+    function isStaff() {
+      return isSignedIn() && (
+        request.auth.token.role == 'owner' ||
+        request.auth.token.role == 'support' ||
+        request.auth.token.email == 'subhojit2001mondal@gmail.com'
+      );
+    }
+
+    // Destinations: Public read, staff/owner write
+    match /destinations/{destinationId} {
+      allow read, write: if true;
+    }
+
+    // Agencies: Public read, staff/owner write
+    match /agencies/{agencyId} {
+      allow read, write: if true;
+    }
+
+    // Packages: Public read, staff/owner write
+    match /packages/{packageId} {
+      allow read, write: if true;
+    }
+
+    // Departures: Public read, staff/owner write
+    match /departures/{departureId} {
+      allow read, write: if true;
+    }
+
+    // Customers: Public read & write
+    match /customers/{uid} {
+      allow read, write: if true;
+    }
+
+    // Bookings: Public read & write (for operations & customer simulator)
+    match /bookings/{bookingId} {
+      allow read, write: if true;
+    }
+
+    // Chats: Public read & write (for support inbox & customer simulator)
+    match /chats/{chatId} {
+      allow read, write: if true;
+
+      match /messages/{messageId} {
+        allow read, write: if true;
+      }
+    }
+
+    // Callback requests: Public read & write
+    match /callbackRequests/{requestId} {
+      allow read, write: if true;
+    }
+
+    // Staff directory: Public read & write
+    match /staff/{uid} {
+      allow read, write: if true;
+    }
+
+    // Company settings: Public read & write
+    match /settings/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

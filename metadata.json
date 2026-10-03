@@ -1,0 +1,6 @@
+{
+  "name": "Tour Manage Admin",
+  "description": "Central control panel for Tour Manage.com, managing Indian tour packages, agencies, bookings, departures, pricing, customer support, and Android app API.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
