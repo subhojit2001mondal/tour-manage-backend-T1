@@ -25,6 +25,7 @@ import {
 import {
   collection,
   onSnapshot,
+  getDocs,
   doc,
   setDoc,
   updateDoc,
@@ -97,6 +98,7 @@ export const PackagesScreen: React.FC = () => {
   const [amenityInput, setAmenityInput] = useState('');
 
   // Quick inline creation states for agencies & destinations
+  const [loadingRelated, setLoadingRelated] = useState(true);
   const [showQuickAgency, setShowQuickAgency] = useState(false);
   const [quickAgencyName, setQuickAgencyName] = useState('');
   const [quickAgencyCity, setQuickAgencyCity] = useState('Srinagar');
@@ -221,6 +223,35 @@ export const PackagesScreen: React.FC = () => {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
+    // Direct getDocs fetch for immediate data population without waiting
+    const fetchDirectly = async () => {
+      try {
+        const [agSnap, destSnap, pkgSnap] = await Promise.all([
+          getDocs(collection(db, 'agencies')),
+          getDocs(collection(db, 'destinations')),
+          getDocs(collection(db, 'packages')),
+        ]);
+        if (isMounted) {
+          const loadedAgencies = agSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Agency));
+          const loadedDests = destSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Destination));
+          const loadedPkgs = pkgSnap.docs.map((d) => ({ id: d.id, ...d.data() } as TourPackage));
+          
+          setAgencies(loadedAgencies);
+          setDestinations(loadedDests);
+          setPackages(loadedPkgs);
+          setLoadingRelated(false);
+        }
+      } catch (err: any) {
+        console.warn('Initial direct fetch notice:', err.message);
+        if (isMounted) setLoadingRelated(false);
+      }
+    };
+
+    fetchDirectly();
+
+    // Real-time synchronization
     const unsubPkgs = onSnapshot(
       collection(db, 'packages'),
       (snap) => {
@@ -231,24 +262,66 @@ export const PackagesScreen: React.FC = () => {
     const unsubAgencies = onSnapshot(
       collection(db, 'agencies'),
       (snap) => {
-        setAgencies(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Agency)));
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Agency));
+        setAgencies(list);
+        setLoadingRelated(false);
       },
       (err) => console.warn('Agencies listener notice:', err.message)
     );
     const unsubDests = onSnapshot(
       collection(db, 'destinations'),
       (snap) => {
-        setDestinations(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Destination)));
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Destination));
+        setDestinations(list);
+        setLoadingRelated(false);
       },
       (err) => console.warn('Destinations listener notice:', err.message)
     );
 
     return () => {
+      isMounted = false;
       unsubPkgs();
       unsubAgencies();
       unsubDests();
     };
   }, []);
+
+  // Synchronize editingPkg agencyId and destinationId with loaded collections
+  useEffect(() => {
+    if (!editingPkg) return;
+
+    setEditingPkg((prev) => {
+      if (!prev) return null;
+      let changed = false;
+      let targetAgency = prev.agencyId;
+      let targetDest = prev.destinationId;
+
+      if (agencies.length > 0) {
+        const agencyValid = agencies.some((a) => a.id === targetAgency);
+        if (!targetAgency || !agencyValid) {
+          targetAgency = agencies[0].id;
+          changed = true;
+        }
+      }
+
+      if (destinations.length > 0) {
+        const destValid = destinations.some((d) => d.id === targetDest);
+        if (!targetDest || !destValid) {
+          targetDest = destinations[0].id;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        return {
+          ...prev,
+          agencyId: targetAgency,
+          destinationId: targetDest,
+        };
+      }
+      return prev;
+    });
+  }, [agencies, destinations, isModalOpen]);
 
   const filteredPackages = packages.filter((pkg) => {
     const matchesSearch =
@@ -260,8 +333,8 @@ export const PackagesScreen: React.FC = () => {
   });
 
   const handleOpenAdd = () => {
-    const defaultDest = destinations[0]?.id || 'kashmir';
-    const defaultAgency = agencies[0]?.id || 'agency-himalayan-horizons';
+    const defaultDest = destinations.length > 0 ? destinations[0].id : '';
+    const defaultAgency = agencies.length > 0 ? agencies[0].id : '';
 
     setEditingPkg({
       id: '',
@@ -363,9 +436,25 @@ export const PackagesScreen: React.FC = () => {
     setSaving(true);
 
     try {
+      const finalAgencyId = editingPkg.agencyId || (agencies.length > 0 ? agencies[0].id : '');
+      const finalDestinationId = editingPkg.destinationId || (destinations.length > 0 ? destinations[0].id : '');
+
+      if (!finalAgencyId) {
+        setError('Please select or create a Partner Agency.');
+        setSaving(false);
+        return;
+      }
+      if (!finalDestinationId) {
+        setError('Please select or create a Destination.');
+        setSaving(false);
+        return;
+      }
+
       const id = editingPkg.id || `pkg-${Date.now()}`;
       const payload = {
         ...editingPkg,
+        agencyId: finalAgencyId,
+        destinationId: finalDestinationId,
         days: Number(editingPkg.days) || 1,
         nights: Number(editingPkg.nights) || 0,
         pricePerPerson: Number(editingPkg.pricePerPerson) || 0,
@@ -721,8 +810,21 @@ export const PackagesScreen: React.FC = () => {
                     {/* Partner Agency */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                          Partner Agency *
+                        <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                          <span>Partner Agency *</span>
+                          {agencies.length > 0 ? (
+                            <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-200">
+                              {agencies.length} registered
+                            </span>
+                          ) : loadingRelated ? (
+                            <span className="text-[10px] text-amber-700 font-semibold bg-amber-100/70 px-2 py-0.5 rounded-full">
+                              Loading...
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-rose-700 font-semibold bg-rose-100/70 px-2 py-0.5 rounded-full">
+                              0 found
+                            </span>
+                          )}
                         </label>
                         <button
                           type="button"
@@ -763,20 +865,24 @@ export const PackagesScreen: React.FC = () => {
                       ) : (
                         <select
                           required
-                          value={editingPkg.agencyId || ''}
+                          value={editingPkg.agencyId || (agencies.length > 0 ? agencies[0].id : '')}
                           onChange={(e) => setEditingPkg({ ...editingPkg, agencyId: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-900 font-medium"
                         >
-                          {agencies.length === 0 && (
+                          {agencies.length === 0 ? (
                             <option value="" disabled>
-                              -- No agencies created yet (click + Add New Agency) --
+                              {loadingRelated ? '⏳ Loading partner agencies...' : '-- No agencies found (click + Add New Agency) --'}
                             </option>
+                          ) : (
+                            <>
+                              {!editingPkg.agencyId && <option value="" disabled>-- Select Partner Agency --</option>}
+                              {agencies.map((a) => (
+                                <option key={a.id} value={a.id}>
+                                  {a.name} ({a.city || 'India'}{a.tier ? ` • ${a.tier}` : ''})
+                                </option>
+                              ))}
+                            </>
                           )}
-                          {agencies.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.name} ({a.city} • {a.tier})
-                            </option>
-                          ))}
                         </select>
                       )}
                     </div>
@@ -784,8 +890,21 @@ export const PackagesScreen: React.FC = () => {
                     {/* Destination */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                          Destination *
+                        <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                          <span>Destination *</span>
+                          {destinations.length > 0 ? (
+                            <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-200">
+                              {destinations.length} registered
+                            </span>
+                          ) : loadingRelated ? (
+                            <span className="text-[10px] text-amber-700 font-semibold bg-amber-100/70 px-2 py-0.5 rounded-full">
+                              Loading...
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-rose-700 font-semibold bg-rose-100/70 px-2 py-0.5 rounded-full">
+                              0 found
+                            </span>
+                          )}
                         </label>
                         <button
                           type="button"
@@ -826,20 +945,24 @@ export const PackagesScreen: React.FC = () => {
                       ) : (
                         <select
                           required
-                          value={editingPkg.destinationId || ''}
+                          value={editingPkg.destinationId || (destinations.length > 0 ? destinations[0].id : '')}
                           onChange={(e) => setEditingPkg({ ...editingPkg, destinationId: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white text-slate-900 font-medium"
                         >
-                          {destinations.length === 0 && (
+                          {destinations.length === 0 ? (
                             <option value="" disabled>
-                              -- No destinations created yet (click + Add New Destination) --
+                              {loadingRelated ? '⏳ Loading destinations...' : '-- No destinations found (click + Add New Destination) --'}
                             </option>
+                          ) : (
+                            <>
+                              {!editingPkg.destinationId && <option value="" disabled>-- Select Destination --</option>}
+                              {destinations.map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  {d.name} ({d.region || d.state || 'India'})
+                                </option>
+                              ))}
+                            </>
                           )}
-                          {destinations.map((d) => (
-                            <option key={d.id} value={d.id}>
-                              {d.name} ({d.region})
-                            </option>
-                          ))}
                         </select>
                       )}
                     </div>

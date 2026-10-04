@@ -41,9 +41,13 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // Customers: Public read & write
+    // Customers: Staff read all, customer read/create/update own document with allowed fields
     match /customers/{uid} {
-      allow read, write: if true;
+      allow read: if isStaff() || (isSignedIn() && request.auth.uid == uid);
+      allow create, update: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'createdAt'])
+        && request.resource.data.email == request.auth.token.email;
+      allow delete: if false;
     }
 
     // Bookings: Public read & write (for operations & customer simulator)
