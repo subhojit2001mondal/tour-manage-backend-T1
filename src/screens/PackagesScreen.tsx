@@ -20,6 +20,7 @@ import {
   Eye,
   EyeOff,
   Image as ImageIcon,
+  Sparkles,
 } from 'lucide-react';
 import {
   collection,
@@ -94,6 +95,130 @@ export const PackagesScreen: React.FC = () => {
   const [inclusionInput, setInclusionInput] = useState('');
   const [exclusionInput, setExclusionInput] = useState('');
   const [amenityInput, setAmenityInput] = useState('');
+
+  // Quick inline creation states for agencies & destinations
+  const [showQuickAgency, setShowQuickAgency] = useState(false);
+  const [quickAgencyName, setQuickAgencyName] = useState('');
+  const [quickAgencyCity, setQuickAgencyCity] = useState('Srinagar');
+  const [showQuickDest, setShowQuickDest] = useState(false);
+  const [quickDestName, setQuickDestName] = useState('');
+  const [quickDestState, setQuickDestState] = useState('Jammu & Kashmir');
+  const [quickCreating, setQuickCreating] = useState(false);
+
+  const handleCreateDefaultStarterData = async () => {
+    setQuickCreating(true);
+    try {
+      const sampleAgency: Agency = {
+        id: 'agency-himalayan-horizons',
+        name: 'Himalayan Horizons Travel Co.',
+        logoUrl: 'https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=300&q=80',
+        description: 'Premier tour and transport operator specializing in scenic northern and mountain circuits.',
+        tier: 'premium',
+        rating: 4.9,
+        verified: true,
+        phone: '+91 98765 43210',
+        email: 'ops@himalayanhorizons.test',
+        city: 'Srinagar',
+        commissionPercent: 12,
+        active: true,
+      };
+
+      const sampleDest: Destination = {
+        id: 'kashmir',
+        name: 'Kashmir',
+        state: 'Jammu & Kashmir',
+        region: 'North',
+        description: 'Paradise on Earth with serene Dal Lake, houseboats, and snow-clad peaks.',
+        coverImageUrl: 'https://images.unsplash.com/photo-1598091383021-15ddea10925d?w=800&q=80',
+        galleryUrls: [
+          'https://images.unsplash.com/photo-1598091383021-15ddea10925d?w=800&q=80',
+          'https://images.unsplash.com/photo-1620619767323-b95a89183081?w=800&q=80',
+        ],
+        bestSeason: 'Mar - Oct',
+        tags: ['Mountains', 'Houseboat', 'Lakes', 'Snow'],
+        featured: true,
+        active: true,
+      };
+
+      await setDoc(doc(db, 'agencies', sampleAgency.id), sampleAgency);
+      await setDoc(doc(db, 'destinations', sampleDest.id), sampleDest);
+
+      setEditingPkg((prev) =>
+        prev
+          ? {
+              ...prev,
+              agencyId: sampleAgency.id,
+              destinationId: sampleDest.id,
+            }
+          : null
+      );
+    } catch (err: any) {
+      setError(err.message || 'Failed to create starter records');
+    } finally {
+      setQuickCreating(false);
+    }
+  };
+
+  const handleSaveQuickAgency = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickAgencyName.trim()) return;
+    setQuickCreating(true);
+    try {
+      const id = 'agency-' + quickAgencyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+      const newAgency: Agency = {
+        id,
+        name: quickAgencyName.trim(),
+        logoUrl: 'https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=300&q=80',
+        description: `Local operations partner for tour packages.`,
+        tier: 'standard',
+        rating: 4.8,
+        verified: true,
+        phone: '+91 98765 00000',
+        email: `contact@${id}.test`,
+        city: quickAgencyCity.trim() || 'Srinagar',
+        commissionPercent: 10,
+        active: true,
+      };
+      await setDoc(doc(db, 'agencies', id), newAgency);
+      setEditingPkg((prev) => (prev ? { ...prev, agencyId: id } : null));
+      setQuickAgencyName('');
+      setShowQuickAgency(false);
+    } catch (err: any) {
+      setError(err.message || 'Failed to create agency');
+    } finally {
+      setQuickCreating(false);
+    }
+  };
+
+  const handleSaveQuickDest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickDestName.trim()) return;
+    setQuickCreating(true);
+    try {
+      const id = quickDestName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+      const newDest: Destination = {
+        id,
+        name: quickDestName.trim(),
+        state: quickDestState.trim() || 'Jammu & Kashmir',
+        region: 'North',
+        description: `Scenic destinations and cultural tours.`,
+        coverImageUrl: 'https://images.unsplash.com/photo-1598091383021-15ddea10925d?w=800&q=80',
+        galleryUrls: ['https://images.unsplash.com/photo-1598091383021-15ddea10925d?w=800&q=80'],
+        bestSeason: 'Year-round',
+        tags: ['Explore', 'Sightseeing'],
+        featured: true,
+        active: true,
+      };
+      await setDoc(doc(db, 'destinations', id), newDest);
+      setEditingPkg((prev) => (prev ? { ...prev, destinationId: id } : null));
+      setQuickDestName('');
+      setShowQuickDest(false);
+    } catch (err: any) {
+      setError(err.message || 'Failed to create destination');
+    } finally {
+      setQuickCreating(false);
+    }
+  };
 
   useEffect(() => {
     const unsubPkgs = onSnapshot(
@@ -567,41 +692,156 @@ export const PackagesScreen: React.FC = () => {
               {/* SECTION 1: BASICS */}
               {activeTab === 'basics' && (
                 <div className="space-y-4">
+                  {/* Empty warning banner & 1-click sample data */}
+                  {(agencies.length === 0 || destinations.length === 0) && (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs space-y-2.5">
+                      <div className="flex items-center gap-2 font-bold text-amber-900">
+                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>Why are Partner Agency and Destination empty?</span>
+                      </div>
+                      <p className="text-amber-800 leading-relaxed text-[11px]">
+                        A Tour Package must be connected to an <strong>operating Agency</strong> (from the Agencies tab) and a <strong>Destination</strong> (from the Destinations tab). Because this is a fresh setup with no records added yet, the dropdowns are currently empty.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleCreateDefaultStarterData}
+                          disabled={quickCreating}
+                          className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          {quickCreating ? 'Creating...' : 'Create Starter Agency & Destination (1-Click)'}
+                        </button>
+                        <span className="text-[11px] text-amber-700">or use the "+ Add" buttons below to type your own!</span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Partner Agency */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Partner Agency *
-                      </label>
-                      <select
-                        required
-                        value={editingPkg.agencyId || ''}
-                        onChange={(e) => setEditingPkg({ ...editingPkg, agencyId: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
-                      >
-                        {agencies.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.name} ({a.city} • {a.tier})
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                          Partner Agency *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowQuickAgency(!showQuickAgency)}
+                          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer"
+                        >
+                          {showQuickAgency ? 'Close' : '+ Add New Agency'}
+                        </button>
+                      </div>
+
+                      {showQuickAgency ? (
+                        <div className="p-3 bg-slate-50 border border-indigo-200 rounded-xl space-y-2">
+                          <input
+                            type="text"
+                            placeholder="Agency Name (e.g. Himalayan Horizons)"
+                            value={quickAgencyName}
+                            onChange={(e) => setQuickAgencyName(e.target.value)}
+                            className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900"
+                          />
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="City (e.g. Srinagar)"
+                              value={quickAgencyCity}
+                              onChange={(e) => setQuickAgencyCity(e.target.value)}
+                              className="w-1/2 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleSaveQuickAgency}
+                              disabled={quickCreating || !quickAgencyName.trim()}
+                              className="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold py-1.5 disabled:opacity-50"
+                            >
+                              {quickCreating ? 'Saving...' : 'Save & Select'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <select
+                          required
+                          value={editingPkg.agencyId || ''}
+                          onChange={(e) => setEditingPkg({ ...editingPkg, agencyId: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                        >
+                          {agencies.length === 0 && (
+                            <option value="" disabled>
+                              -- No agencies created yet (click + Add New Agency) --
+                            </option>
+                          )}
+                          {agencies.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name} ({a.city} • {a.tier})
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
 
+                    {/* Destination */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Destination *
-                      </label>
-                      <select
-                        required
-                        value={editingPkg.destinationId || ''}
-                        onChange={(e) => setEditingPkg({ ...editingPkg, destinationId: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
-                      >
-                        {destinations.map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.name} ({d.region})
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                          Destination *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowQuickDest(!showQuickDest)}
+                          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer"
+                        >
+                          {showQuickDest ? 'Close' : '+ Add New Destination'}
+                        </button>
+                      </div>
+
+                      {showQuickDest ? (
+                        <div className="p-3 bg-slate-50 border border-indigo-200 rounded-xl space-y-2">
+                          <input
+                            type="text"
+                            placeholder="Destination (e.g. Kashmir or Goa)"
+                            value={quickDestName}
+                            onChange={(e) => setQuickDestName(e.target.value)}
+                            className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900"
+                          />
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="State (e.g. Jammu & Kashmir)"
+                              value={quickDestState}
+                              onChange={(e) => setQuickDestState(e.target.value)}
+                              className="w-1/2 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleSaveQuickDest}
+                              disabled={quickCreating || !quickDestName.trim()}
+                              className="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold py-1.5 disabled:opacity-50"
+                            >
+                              {quickCreating ? 'Saving...' : 'Save & Select'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <select
+                          required
+                          value={editingPkg.destinationId || ''}
+                          onChange={(e) => setEditingPkg({ ...editingPkg, destinationId: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                        >
+                          {destinations.length === 0 && (
+                            <option value="" disabled>
+                              -- No destinations created yet (click + Add New Destination) --
+                            </option>
+                          )}
+                          {destinations.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name} ({d.region})
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   </div>
 
